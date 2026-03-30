@@ -76,7 +76,7 @@ export default function MapComponent() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-bg-color">
+      <div className="h-full flex items-center justify-center bg-bg-color">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -91,7 +91,7 @@ export default function MapComponent() {
 
   if (!userLocation) {
     return (
-      <div className="h-screen flex items-center justify-center bg-bg-color">
+      <div className="h-full flex items-center justify-center bg-bg-color">
         <div className="text-red-500 text-center">
           <p>Unable to load map</p>
           <p>Please check your location permissions</p>
@@ -105,7 +105,7 @@ export default function MapComponent() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="h-screen w-full relative"
+      className="h-full w-full relative"
     >
       <MapContainer
         center={userLocation}
