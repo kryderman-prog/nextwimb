@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js Map Application
 
-## Getting Started
+A complete Next.js application with Google OAuth authentication, interactive Leaflet maps, and Supabase database integration.
 
-First, run the development server:
+## Features
+
+- **Authentication**: Google OAuth via Supabase
+- **Interactive Maps**: Leaflet with OpenStreetMap tiles
+- **Database**: Supabase with real-time updates
+- **State Management**: Custom React hooks
+- **TypeScript**: Full type safety
+- **App Router**: Next.js 14+ App Router
+
+## Setup Instructions
+
+### 1. Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 2. Supabase Setup
+
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Go to Authentication > Providers and enable Google OAuth
+3. Configure the OAuth redirect URL to: `https://your-domain.com/auth/callback`
+4. Create a `markers` table with the following schema:
+
+```sql
+CREATE TABLE markers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  title TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE markers ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for users to only see their own markers
+CREATE POLICY "Users can view their own markers" ON markers
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own markers" ON markers
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own markers" ON markers
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own markers" ON markers
+  FOR DELETE USING (auth.uid() = user_id);
+```
+
+### 3. Install Dependencies
+
+```bash
+npm install
+```
+
+### 4. Run the Application
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+/app
+  /auth
+    /login          # Login page
+  /dashboard        # Protected dashboard
+  /map              # Map page
+/components
+  Map.tsx           # Leaflet map component
+  SignOutButton.tsx # Sign out component
+/hooks
+  useMarkers.ts     # Custom hook for marker management
+/services
+  markers.ts        # Database service for markers
+/lib
+  supabase.ts       # Client-side Supabase client
+  supabase-server.ts # Server-side Supabase client
+middleware.ts       # Auth middleware
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage
 
-## Learn More
+1. Visit the application - you'll be redirected to login
+2. Sign in with Google
+3. Access the dashboard and navigate to the map
+4. Click on the map to add markers
+5. Markers are stored in Supabase and sync in real-time
 
-To learn more about Next.js, take a look at the following resources:
+## Technologies Used
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 14+ App Router
+- TypeScript
+- Supabase (Auth + Database)
+- Leaflet + React-Leaflet
+- Tailwind CSS
