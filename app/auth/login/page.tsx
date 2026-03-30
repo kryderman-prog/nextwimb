@@ -1,25 +1,48 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { authService } from '@/services/authService'
+import { useState, useEffect, type MouseEvent } from 'react'
+import { useSupabase } from '@/hooks/useSupabase'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const supabase = useSupabase()
 
   useEffect(() => {
     console.log("🔍 LoginPage mounted")
-    console.log("🔍 authService available:", !!authService)
-  }, [])
+    console.log("🔍 Supabase client available:", !!supabase)
+  }, [supabase])
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (e?: MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault()
+    e?.stopPropagation()
     console.log("🔍 Login button clicked - handler called")
     try {
       setLoading(true)
       setError(null)
-      console.log("🔍 Calling authService.signInWithGoogle()")
-      await authService.signInWithGoogle()
-      console.log("🔍 authService.signInWithGoogle() completed")
+      const redirectUrl =
+        process.env.NEXT_PUBLIC_SITE_URL
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+          : typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : 'http://localhost:3000/auth/callback'
+
+      console.log("Using redirect URL:", redirectUrl)
+      console.log("🔍 Calling supabase.auth.signInWithOAuth({ provider: 'google' })")
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+        },
+      })
+
+      if (error) throw error
+
+      // Defensive: some client configurations may return a URL without auto-redirecting.
+      if (data?.url) {
+        window.location.assign(data.url)
+      }
     } catch (err) {
       console.error("🔍 Login error:", err)
       setError(err instanceof Error ? err.message : 'Failed to sign in')
