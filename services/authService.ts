@@ -19,21 +19,6 @@ export class AuthService {
   async signInWithGoogle() {
     console.log("🔍 signInWithGoogle called")
 
-    // Debug environment variables
-    console.log("NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log("NEXT_PUBLIC_SUPABASE_ANON_KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Set" : "Not set")
-    console.log("NEXT_PUBLIC_SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL)
-    console.log("VERCEL_URL:", process.env.VERCEL_URL)
-    console.log("window.location.origin:", typeof window !== 'undefined' ? window.location.origin : 'SSR')
-
-    // Test Supabase connection
-    try {
-      const { data: testData, error: testError } = await this.supabase.auth.getSession()
-      console.log("Supabase connection test:", { testData, testError })
-    } catch (testErr) {
-      console.error("Supabase connection failed:", testErr)
-    }
-
     // Determine the correct redirect URL
     let redirectUrl: string
     if (process.env.NEXT_PUBLIC_SITE_URL) {
@@ -55,8 +40,6 @@ export class AuthService {
         redirectTo: redirectUrl,
       },
     })
-
-    console.log("OAuth response:", { data, error })
 
     if (error) {
       console.error("OAuth error:", error)

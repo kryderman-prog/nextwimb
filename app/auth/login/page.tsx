@@ -45,11 +45,8 @@ export default function LoginPage() {
             </div>
           )}
           <button
-            onClick={() => {
-              console.log("🔍 Button clicked directly")
-              alert("Button clicked! Check console for logs.")
-              handleGoogleSignIn()
-            }}
+            type="button"
+            onClick={handleGoogleSignIn}
             disabled={loading}
             className="w-full flex justify-center items-center px-6 py-3 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-smooth"
           >
