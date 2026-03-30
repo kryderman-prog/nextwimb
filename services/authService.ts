@@ -11,17 +11,59 @@ export interface UserProfile {
 export class AuthService {
   private supabase = createClient()
 
+  constructor() {
+    console.log("🔍 AuthService constructor called")
+    console.log("🔍 Supabase client created:", !!this.supabase)
+  }
+
   async signInWithGoogle() {
-    const { error } = await this.supabase.auth.signInWithOAuth({
+    console.log("🔍 signInWithGoogle called")
+
+    // Debug environment variables
+    console.log("NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log("NEXT_PUBLIC_SUPABASE_ANON_KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Set" : "Not set")
+    console.log("NEXT_PUBLIC_SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL)
+    console.log("VERCEL_URL:", process.env.VERCEL_URL)
+    console.log("window.location.origin:", typeof window !== 'undefined' ? window.location.origin : 'SSR')
+
+    // Test Supabase connection
+    try {
+      const { data: testData, error: testError } = await this.supabase.auth.getSession()
+      console.log("Supabase connection test:", { testData, testError })
+    } catch (testErr) {
+      console.error("Supabase connection failed:", testErr)
+    }
+
+    // Determine the correct redirect URL
+    let redirectUrl: string
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+    } else if (process.env.VERCEL_URL) {
+      redirectUrl = `https://${process.env.VERCEL_URL}/auth/callback`
+    } else if (typeof window !== 'undefined') {
+      redirectUrl = `${window.location.origin}/auth/callback`
+    } else {
+      // Fallback for SSR
+      redirectUrl = 'http://localhost:3000/auth/callback'
+    }
+
+    console.log("Using redirect URL:", redirectUrl)
+
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // redirectTo: `${window.location.origin}/auth/callback`,
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-
+        redirectTo: redirectUrl,
       },
     })
 
-    if (error) throw error
+    console.log("OAuth response:", { data, error })
+
+    if (error) {
+      console.error("OAuth error:", error)
+      throw error
+    }
+
+    console.log("OAuth initiated successfully")
   }
 
   async getOrCreateUser(user: User): Promise<UserProfile> {
