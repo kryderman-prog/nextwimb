@@ -34,10 +34,14 @@ export class AuthService {
 
     console.log("Using redirect URL:", redirectUrl)
 
-    const { data, error } = await this.supabase.auth.signInWithOAuth({
+    const { error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectUrl,
+        queryParams: {
+          // Force Google account picker after logout (and generally make account switching easy).
+          prompt: 'select_account',
+        },
       },
     })
 
@@ -88,3 +92,45 @@ export class AuthService {
 }
 
 export const authService = new AuthService()
+
+export async function logout(): Promise<void> {
+  let logoutError: unknown = null
+
+  try {
+    const response = await fetch('/api/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      logoutError = await response.text()
+    }
+  } catch (error) {
+    logoutError = error
+  }
+
+  // Best-effort client cleanup regardless of API outcome.
+  try {
+    localStorage.clear()
+  } catch {}
+  try {
+    sessionStorage.clear()
+  } catch {}
+
+  // Fallback: if the API fails, also attempt a client-side sign out.
+  if (logoutError) {
+    console.error('Logout API error:', logoutError)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Client signOut fallback error:', error)
+    }
+  }
+
+  // Use an alias route so the app can keep `/auth/login` internally.
+  window.location.assign('/login')
+}

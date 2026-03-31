@@ -2,9 +2,10 @@
 
 import { useAuth } from '@/hooks/useAuth'
 import UserSearch from './UserSearch'
+import LogoutButton from './LogoutButton'
 
 export default function Navbar() {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
 
   return (
     <nav className="glassmorphism border-b border-gray-200 px-4 py-3 relative z-[1500]">
@@ -20,15 +21,7 @@ export default function Navbar() {
 
         <div className="flex items-center space-x-4">
           <UserSearch />
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              onClick={() => signOut()}
-              className="text-sm text-gray-600 hover:text-primary-color transition-smooth"
-            >
-              Logout
-            </button>
-          </form>
+          <LogoutButton />
         </div>
       </div>
     </nav>
