@@ -55,8 +55,7 @@ export function useNotifications() {
         { event: 'INSERT', schema: 'public', table: 'circle_invitations' },
         (payload) => {
           const row = payload.new as CircleInvitationRow
-          const receiver = row.receiver_id ?? row.invited_user_id ?? null
-          if (receiver !== userId) return
+          if (row.invited_user_id !== userId) return
           if (row.status !== 'pending') return
 
           setState((prev) => {
@@ -75,16 +74,18 @@ export function useNotifications() {
     }
   }, [supabase, userId])
 
-  const accept = useCallback(
-    async (invite: InvitationWithSender) => {
+  const acceptInvite = useCallback(
+    async (inviteId: string) => {
       if (!userId) return
       if (isMutating) return
-      setIsMutating(invite.id)
+      const invite = state.invitations.find((i) => i.id === inviteId)
+      if (!invite) return
+      setIsMutating(inviteId)
       try {
         await acceptInvitation(supabase, invite, userId)
         setState((prev) => ({
           ...prev,
-          invitations: prev.invitations.filter((i) => i.id !== invite.id),
+          invitations: prev.invitations.filter((i) => i.id !== inviteId),
         }))
       } catch (error) {
         console.error('[useNotifications] accept error:', error)
@@ -92,19 +93,21 @@ export function useNotifications() {
         setIsMutating(null)
       }
     },
-    [supabase, userId, isMutating]
+    [supabase, userId, isMutating, state.invitations]
   )
 
-  const reject = useCallback(
-    async (invite: InvitationWithSender) => {
+  const rejectInvite = useCallback(
+    async (inviteId: string) => {
       if (!userId) return
       if (isMutating) return
-      setIsMutating(invite.id)
+      const invite = state.invitations.find((i) => i.id === inviteId)
+      if (!invite) return
+      setIsMutating(inviteId)
       try {
         await rejectInvitation(supabase, invite, userId)
         setState((prev) => ({
           ...prev,
-          invitations: prev.invitations.filter((i) => i.id !== invite.id),
+          invitations: prev.invitations.filter((i) => i.id !== inviteId),
         }))
       } catch (error) {
         console.error('[useNotifications] reject error:', error)
@@ -112,23 +115,29 @@ export function useNotifications() {
         setIsMutating(null)
       }
     },
-    [supabase, userId, isMutating]
+    [supabase, userId, isMutating, state.invitations]
   )
-
-  const count = state.invitations.length
 
   return useMemo(
     () => ({
-      invitations: state.invitations,
-      count,
+      notifications: state.invitations,
+      count: state.invitations.length,
       loading: state.loading || authLoading,
       isMutating,
       refresh,
-      accept,
-      reject,
+      acceptInvite,
+      rejectInvite,
       isLoggedIn: !!userId,
     }),
-    [state.invitations, state.loading, authLoading, count, isMutating, refresh, accept, reject, userId]
+    [
+      state.invitations,
+      state.loading,
+      authLoading,
+      isMutating,
+      refresh,
+      acceptInvite,
+      rejectInvite,
+      userId,
+    ]
   )
 }
-

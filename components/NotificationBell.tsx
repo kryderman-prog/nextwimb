@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 
 export default function NotificationBell() {
-  const { invitations, count, loading, accept, reject, isMutating, isLoggedIn } = useNotifications()
+  const { notifications, count, loading, acceptInvite, rejectInvite, isMutating, isLoggedIn } = useNotifications()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -22,6 +22,7 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
+  if (loading) return null
   if (!isLoggedIn) return null
 
   return (
@@ -63,7 +64,7 @@ export default function NotificationBell() {
             {count === 0 ? (
               <div className="px-4 py-4 text-sm text-gray-600">No notifications</div>
             ) : (
-              invitations.map((invite) => {
+              notifications.map((invite) => {
                 const senderName =
                   invite.sender?.firstname ||
                   (invite.sender?.username ? `@${invite.sender.username}` : null) ||
@@ -85,7 +86,7 @@ export default function NotificationBell() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => void accept(invite)}
+                        onClick={() => void acceptInvite(invite.id)}
                         disabled={disabled}
                         className="text-xs px-3 py-2 rounded-lg bg-primary-color text-white hover:bg-opacity-90 disabled:opacity-50 transition-smooth"
                       >
@@ -93,7 +94,7 @@ export default function NotificationBell() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void reject(invite)}
+                        onClick={() => void rejectInvite(invite.id)}
                         disabled={disabled}
                         className="text-xs px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-smooth"
                       >
@@ -110,4 +111,3 @@ export default function NotificationBell() {
     </div>
   )
 }
-

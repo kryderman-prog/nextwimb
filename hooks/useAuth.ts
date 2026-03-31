@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 import { useSupabase } from '@/hooks/useSupabase'
 
 export function useAuth() {
   const supabase = useSupabase()
   const [session, setSession] = useState<Session | null | undefined>(undefined)
+  const [user, setUser] = useState<User | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,10 +19,12 @@ export function useAuth() {
         if (error) throw error
         if (!mounted) return
         setSession(data.session ?? null)
+        setUser(data.session?.user ?? null)
       } catch (error) {
         console.error('[useAuth] getSession error:', error)
         if (!mounted) return
         setSession(null)
+        setUser(null)
       } finally {
         if (!mounted) return
         setLoading(false)
@@ -37,6 +40,7 @@ export function useAuth() {
         expiresAt: session?.expires_at,
       })
       setSession(session ?? null)
+      setUser(session?.user ?? null)
       setLoading(false)
     })
 
@@ -50,5 +54,5 @@ export function useAuth() {
     console.log('[useAuth] state:', { loading, hasSession: !!session })
   }, [loading, session])
 
-  return { session, loading }
+  return { session, user, loading }
 }
