@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthContext } from '@/hooks/auth-context'
 import { useSupabase } from '@/hooks/useSupabase'
+import { useAuth } from '@/hooks/useAuth'
 import { userService, UserProfile } from '@/services/userService'
 import { motion, AnimatePresence } from 'framer-motion'
 import EmptyState from '@/components/EmptyState'
@@ -13,12 +14,13 @@ export default function UserSearch() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const { user } = useAuthContext()
+  const { loading: authLoading } = useAuth()
   const supabase = useSupabase()
   const searchRef = useRef<HTMLDivElement>(null)
   const latestRequestIdRef = useRef(0)
   const [loadingUser, setLoadingUser] = useState<string | null>(null)
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(() => new Set())
-  const [circleId, setCircleId] = useState<string | null>(null)
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,35 +74,20 @@ export default function UserSearch() {
     })
   }
 
-  const resolveCurrentCircleId = async () => {
-    if (circleId) return circleId
-    if (!user) return null
-
-    try {
-      const { data, error } = await supabase
-        .from('circle_members')
-        .select('circle_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle()
-
-      if (error) throw error
-
-      const resolved = (data as { circle_id?: string } | null)?.circle_id ?? null
-      console.log('[UserSearch] resolved circleId:', resolved)
-      setCircleId(resolved)
-      return resolved
-    } catch (error) {
-      console.error('[UserSearch] resolve circleId error:', error)
-      return null
-    }
-  }
-
   const handleSendInvite = async (invitedUserId: string) => {
     if (loadingUser) return
     if (invitedUsers.has(invitedUserId)) return
+    if (authLoading) {
+      setInviteErrors((prev) => ({ ...prev, [invitedUserId]: 'Auth is still loading. Try again.' }))
+      return
+    }
 
     setLoadingUser(invitedUserId)
+    setInviteErrors((prev) => {
+      const next = { ...prev }
+      delete next[invitedUserId]
+      return next
+    })
 
     try {
       console.log('[UserSearch] handleSendInvite:', invitedUserId)
@@ -115,26 +102,7 @@ export default function UserSearch() {
         return
       }
 
-      const currentCircleId = await resolveCurrentCircleId()
-      if (!currentCircleId) {
-        console.warn('[UserSearch] cannot send invite: missing circleId')
-        return
-      }
-
-      // Check if already member
-      const { data: existingMember, error: memberError } = await supabase
-        .from('circle_members')
-        .select('id')
-        .eq('circle_id', currentCircleId)
-        .eq('user_id', invitedUserId)
-        .maybeSingle()
-
-      if (memberError) throw memberError
-      if (existingMember) {
-        console.log('[UserSearch] already member, skipping invite')
-        markUserAsInvited(invitedUserId)
-        return
-      }
+      const currentCircleId = authedUser.id
 
       // Check existing pending invite
       const { data: existingInvite, error: inviteCheckError } = await supabase
@@ -169,12 +137,17 @@ export default function UserSearch() {
           markUserAsInvited(invitedUserId)
           return
         }
+        console.error('[UserSearch] Supabase insert error:', insertError)
         throw insertError
       }
 
       markUserAsInvited(invitedUserId)
     } catch (err) {
       console.error('[UserSearch] Invite error:', err)
+      setInviteErrors((prev) => ({
+        ...prev,
+        [invitedUserId]: 'Failed to send request. Please try again.',
+      }))
     } finally {
       setLoadingUser(null)
     }
@@ -213,6 +186,7 @@ export default function UserSearch() {
               searchResults.map((resultUser) => {
                 const isSending = loadingUser === resultUser.id
                 const isInvited = invitedUsers.has(resultUser.id)
+                const inviteError = inviteErrors[resultUser.id]
 
                 return (
                   <div
@@ -222,6 +196,7 @@ export default function UserSearch() {
                     <div className="min-w-0">
                       <div className="font-medium text-primary-color">{resultUser.firstname}</div>
                       <div className="text-sm text-gray-500 truncate">@{resultUser.username}</div>
+                      {inviteError ? <div className="mt-1 text-xs text-red-600">{inviteError}</div> : null}
                     </div>
 
                     <button
