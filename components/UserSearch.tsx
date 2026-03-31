@@ -21,6 +21,7 @@ export default function UserSearch() {
   const [loadingUser, setLoadingUser] = useState<string | null>(null)
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(() => new Set())
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({})
+  const [circleId, setCircleId] = useState<string | null>(null)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,6 +75,52 @@ export default function UserSearch() {
     })
   }
 
+  const resolveCircleIdForInvites = async (currentUserId: string) => {
+    if (circleId) return circleId
+
+    const tryColumns = ['owner_id', 'created_by', 'created_by_user_id', 'user_id', 'admin_id'] as const
+    for (const col of tryColumns) {
+      const { data, error } = await supabase
+        .from('circles')
+        .select('id')
+        .eq(col, currentUserId)
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        const msg = error.message?.toLowerCase?.() ?? ''
+        // If the column doesn't exist, try the next one.
+        if (msg.includes('column') || msg.includes(col)) continue
+        console.error('[UserSearch] circles lookup error:', error)
+        break
+      }
+
+      const resolved = (data as { id?: string } | null)?.id ?? null
+      if (resolved) {
+        setCircleId(resolved)
+        return resolved
+      }
+    }
+
+    // Last resort: if RLS restricts circles to the current user, the first row is "their circle".
+    const { data: anyCircle, error: anyCircleError } = await supabase
+      .from('circles')
+      .select('id')
+      .limit(1)
+      .maybeSingle()
+
+    if (anyCircleError) {
+      console.error('[UserSearch] circles fallback lookup error:', anyCircleError)
+      return null
+    }
+
+    const resolved = (anyCircle as { id?: string } | null)?.id ?? null
+    if (resolved) {
+      setCircleId(resolved)
+    }
+    return resolved
+  }
+
   const handleSendInvite = async (invitedUserId: string) => {
     if (loadingUser) return
     if (invitedUsers.has(invitedUserId)) return
@@ -102,7 +149,14 @@ export default function UserSearch() {
         return
       }
 
-      const currentCircleId = authedUser.id
+      const currentCircleId = await resolveCircleIdForInvites(authedUser.id)
+      if (!currentCircleId) {
+        setInviteErrors((prev) => ({
+          ...prev,
+          [invitedUserId]: 'No circle found to invite from.',
+        }))
+        return
+      }
 
       // Check existing pending invite
       const { data: existingInvite, error: inviteCheckError } = await supabase
