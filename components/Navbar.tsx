@@ -3,6 +3,7 @@
 import { useAuthContext } from '@/hooks/auth-context'
 import UserSearch from './UserSearch'
 import LogoutButton from './LogoutButton'
+import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const { profile } = useAuthContext()
@@ -20,6 +21,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center space-x-4">
+          <NotificationBell />
           <UserSearch />
           <LogoutButton />
         </div>
