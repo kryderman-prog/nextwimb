@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
+import EmptyState from '@/components/EmptyState'
 
 export default function NotificationBell() {
   const { notifications, count, loading, acceptInvite, rejectInvite, isMutating, isLoggedIn } = useNotifications()
@@ -22,7 +23,6 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
-  if (loading) return null
   if (!isLoggedIn) return null
 
   return (
@@ -46,11 +46,13 @@ export default function NotificationBell() {
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
 
-        {count > 0 && (
-          <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] leading-5 text-center">
-            {count}
-          </span>
-        )}
+        <span
+          className={`absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full text-[10px] leading-5 text-center ${
+            count > 0 ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
+          }`}
+        >
+          {count}
+        </span>
       </button>
 
       {open && (
@@ -62,7 +64,7 @@ export default function NotificationBell() {
 
           <div className="max-h-80 overflow-y-auto">
             {count === 0 ? (
-              <div className="px-4 py-4 text-sm text-gray-600">No notifications</div>
+              <EmptyState title="No notifications" />
             ) : (
               notifications.map((invite) => {
                 const senderName =
