@@ -44,12 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await loadProfile(session.user.id)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          await loadProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('Error getting session:', error)
+        setUser(null)
+        setProfile(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     getSession()
@@ -57,13 +64,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await loadProfile(session.user.id)
-        } else {
+        try {
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            await loadProfile(session.user.id)
+          } else {
+            setProfile(null)
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error)
+          setUser(null)
           setProfile(null)
+        } finally {
+          setLoading(false)
         }
-        setLoading(false)
       }
     )
 

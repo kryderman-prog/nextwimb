@@ -9,7 +9,6 @@ export default function UserSearch() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
   const { user } = useAuth()
   const searchRef = useRef<HTMLDivElement>(null)
 
@@ -32,8 +31,9 @@ export default function UserSearch() {
         return
       }
 
-      setLoading(true)
       try {
+        setSearchResults([])
+        setIsOpen(false)
         const results = await userService.searchUsers(searchQuery, user?.id)
         setSearchResults(results)
         setIsOpen(results.length > 0)
@@ -41,8 +41,6 @@ export default function UserSearch() {
         console.error('Search error:', error)
         setSearchResults([])
         setIsOpen(false)
-      } finally {
-        setLoading(false)
       }
     }
 
@@ -68,21 +66,15 @@ export default function UserSearch() {
             exit={{ opacity: 0, y: -10 }}
             className="absolute top-full left-0 right-0 mt-2 glassmorphism rounded-xl shadow-lg z-[2000] max-h-64 overflow-y-auto"
           >
-            {loading ? (
-              <div className="p-4 text-center text-gray-500">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-color mx-auto"></div>
+            {searchResults.map((user) => (
+              <div
+                key={user.id}
+                className="px-4 py-3 hover:bg-white hover:bg-opacity-50 cursor-pointer transition-smooth border-b border-gray-100 last:border-b-0"
+              >
+                <div className="font-medium text-primary-color">{user.firstname}</div>
+                <div className="text-sm text-gray-500">@{user.username}</div>
               </div>
-            ) : (
-              searchResults.map((user) => (
-                <div
-                  key={user.id}
-                  className="px-4 py-3 hover:bg-white hover:bg-opacity-50 cursor-pointer transition-smooth border-b border-gray-100 last:border-b-0"
-                >
-                  <div className="font-medium text-primary-color">{user.firstname}</div>
-                  <div className="text-sm text-gray-500">@{user.username}</div>
-                </div>
-              ))
-            )}
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

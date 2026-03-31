@@ -21,11 +21,7 @@ export default function DashboardPage() {
   }, [user, loading, router])
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-color">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-color"></div>
-      </div>
-    )
+    return null
   }
 
   if (!user) {
