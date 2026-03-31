@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import MapComponent from '@/components/Map'
 import Link from 'next/link'
@@ -6,6 +6,7 @@ import Link from 'next/link'
 export default async function MapPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  console.log('[app/map] server user:', user?.id ?? null)
 
   if (!user) {
     redirect('/auth/login')

@@ -1,10 +1,11 @@
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  console.log('[app/page] server user:', user?.id ?? null)
 
   if (user) {
     redirect('/dashboard')

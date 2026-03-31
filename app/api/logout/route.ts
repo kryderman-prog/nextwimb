@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 
 function isSupabaseAuthCookie(name: string) {
   return name.startsWith('sb-') || name.startsWith('supabase-auth-token')

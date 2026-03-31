@@ -14,13 +14,9 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Called from a Server Component render; ignore.
           }
         },
       },
@@ -28,5 +24,3 @@ export async function createClient() {
   )
 }
 
-// Backwards-compatible re-export path:
-// Prefer importing from `@/lib/supabase/server`.

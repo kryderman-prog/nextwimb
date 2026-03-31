@@ -6,7 +6,7 @@ import LogoutButton from './LogoutButton'
 import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
-  const { profile } = useAuthContext()
+  const { profile, user, loading } = useAuthContext()
 
   return (
     <nav className="glassmorphism border-b border-gray-200 px-4 py-3 relative z-[1500]">
@@ -21,9 +21,13 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <NotificationBell />
-          <UserSearch />
-          <LogoutButton />
+          {loading ? null : user ? (
+            <>
+              <NotificationBell />
+              <UserSearch />
+              <LogoutButton />
+            </>
+          ) : null}
         </div>
       </div>
     </nav>

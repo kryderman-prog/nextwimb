@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react'
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo, useRef } from 'react'
 import { User, type Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
 
 interface UserProfile {
   id: string
@@ -26,7 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<Session | null>(null)
+  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const didRefreshRef = useRef(false)
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -93,6 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut()
   }
+
+  useEffect(() => {
+    if (loading) return
+    if (!user) return
+    if (didRefreshRef.current) return
+    didRefreshRef.current = true
+    console.log('[AuthProvider] router.refresh() to sync server/client session')
+    router.refresh()
+  }, [loading, user, router])
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, session, signOut }}>
