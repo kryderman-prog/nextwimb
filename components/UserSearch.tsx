@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuthContext } from '@/hooks/auth-context'
 import { userService, UserProfile } from '@/services/userService'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -9,7 +9,7 @@ export default function UserSearch() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [isOpen, setIsOpen] = useState(false)
-  const { user } = useAuth()
+  const { user } = useAuthContext()
   const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

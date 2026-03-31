@@ -1,11 +1,11 @@
 'use client'
 
-import { useAuth } from '@/hooks/useAuth'
+import { useAuthContext } from '@/hooks/auth-context'
 import UserSearch from './UserSearch'
 import LogoutButton from './LogoutButton'
 
 export default function Navbar() {
-  const { profile } = useAuth()
+  const { profile } = useAuthContext()
 
   return (
     <nav className="glassmorphism border-b border-gray-200 px-4 py-3 relative z-[1500]">

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react'
-import { User } from '@supabase/supabase-js'
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react'
+import { User, type Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabaseClient'
 
 interface UserProfile {
@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   loading: boolean
+  session: Session | null
   signOut: () => Promise<void>
 }
 
@@ -24,7 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [session, setSession] = useState<Session | null>(null)
+  const supabase = useMemo(() => createClient(), [])
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -46,12 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
+        setSession(session ?? null)
         setUser(session?.user ?? null)
         if (session?.user) {
           await loadProfile(session.user.id)
         }
       } catch (error) {
         console.error('Error getting session:', error)
+        setSession(null)
         setUser(null)
         setProfile(null)
       } finally {
@@ -65,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
+          setSession(session ?? null)
           setUser(session?.user ?? null)
           if (session?.user) {
             await loadProfile(session.user.id)
@@ -73,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (error) {
           console.error('Error handling auth state change:', error)
+          setSession(null)
           setUser(null)
           setProfile(null)
         } finally {
@@ -89,16 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signOut }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
+export function useAuthContext() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuthContext must be used within an AuthProvider')
   }
   return context
 }
