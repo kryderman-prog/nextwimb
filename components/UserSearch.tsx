@@ -72,6 +72,59 @@ export default function UserSearch() {
     })
   }
 
+  const ensureUserExists = useCallback(
+    async (authUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } | null) => {
+      if (!authUser?.id) return
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', authUser.id)
+        .single()
+
+      // If user already exists → do nothing
+      if (data) return
+
+      // If not found → insert
+      if (error && (error as { code?: string }).code === 'PGRST116') {
+        const metadata = authUser.user_metadata ?? {}
+        const googleId =
+          (metadata.provider_id as string | undefined) ||
+          authUser.id
+
+        const fullName =
+          (metadata.full_name as string | undefined) ||
+          (metadata.name as string | undefined) ||
+          null
+
+        const username = fullName || authUser.email?.split('@')[0] || 'user'
+        const firstname = fullName?.split(' ')[0] || 'User'
+
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            google_id: googleId,
+            username,
+            firstname,
+          })
+
+        if (insertError) {
+          const code = (insertError as { code?: string }).code
+          // Idempotent: if another request created it first, continue.
+          if (code === '23505') return
+          console.error('USER_CREATE_FAILED', insertError)
+          throw insertError
+        }
+
+        return
+      }
+
+      if (error) throw error
+    },
+    [supabase]
+  )
+
   const handleSendInvite = async (invitedUserId: string, invitedUsername: string) => {
     if (loadingUser) return
     if (invitedUsers.has(invitedUserId)) return
@@ -99,6 +152,9 @@ export default function UserSearch() {
         console.log('[UserSearch] self-invite blocked')
         return
       }
+
+      // Ensure sender exists in public.users (prevents FK violations in RPC inserts)
+      await ensureUserExists(authedUser)
 
       const { data, error } = await supabase.rpc('send_circle_invite', {
         p_circle_name: `circle of ${invitedUsername}`,
