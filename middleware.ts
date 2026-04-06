@@ -2,6 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Skip auth checks for public routes - avoid expensive getUser() calls
+  if (pathname.startsWith('/auth') || pathname.startsWith('/api')) {
+    return NextResponse.next({ request })
+  }
+
+  // Only fetch auth user for protected routes (dashboard, map, etc.)
   const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -27,12 +35,8 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Redirect unauthenticated users from protected routes to login
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     const redirectResponse = NextResponse.redirect(url)
@@ -41,14 +45,6 @@ export async function middleware(request: NextRequest) {
     })
     return redirectResponse
   }
-
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object instead of the supabaseResponse object
 
   return response
 }

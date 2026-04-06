@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/hooks/auth-context";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -27,9 +26,11 @@ export default function RootLayout({
         '--primary-color': '#0f172a',
         '--bg-color': '#fafbfc',
       } as React.CSSProperties}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        {/* 
+          AuthProvider is intentionally NOT here to prevent expensive auth checks
+          on public routes like /auth/login. Protected routes wrap with AuthProvider.
+        */}
+        {children}
       </body>
     </html>
   );

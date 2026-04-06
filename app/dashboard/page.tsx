@@ -1,11 +1,11 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import AuthGuard from '@/components/AuthGuard'
+import Navbar from '@/components/Navbar'
 
-// Dynamically import components that use window
-const Navbar = dynamic(() => import('@/components/Navbar'), { ssr: false })
+// Only MapComponent needs dynamic import as it uses window/canvas APIs
 const MapComponent = dynamic(() => import('@/components/Map'), { ssr: false })
 
 export default function DashboardPage() {
