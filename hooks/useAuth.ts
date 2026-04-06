@@ -6,53 +6,56 @@ import { useSupabase } from '@/hooks/useSupabase'
 
 export function useAuth() {
   const supabase = useSupabase()
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [user, setUser] = useState<User | null | undefined>(undefined)
+  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let mounted = true
+    let active = true
 
-    const loadSession = async () => {
+    const loadAuthState = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
-        if (error) throw error
-        if (!mounted) return
-        setSession(data.session ?? null)
-        setUser(data.session?.user ?? null)
+        const [{ data: userData, error: userError }, { data: sessionData, error: sessionError }] =
+          await Promise.all([supabase.auth.getUser(), supabase.auth.getSession()])
+
+        if (userError) console.error('[useAuth] getUser error:', userError)
+        if (sessionError) console.error('[useAuth] getSession error:', sessionError)
+
+        if (!active) return
+
+        const nextUser = userData.user ?? null
+        // Treat `user` as the source of truth; a stale client session should not
+        // be considered authenticated if `getUser()` returns null.
+        const nextSession = nextUser ? (sessionData.session ?? null) : null
+
+        setUser(nextUser)
+        setSession(nextSession)
       } catch (error) {
-        console.error('[useAuth] getSession error:', error)
-        if (!mounted) return
+        console.error('[useAuth] load auth state error:', error)
+        if (!active) return
         setSession(null)
         setUser(null)
       } finally {
-        if (!mounted) return
+        if (!active) return
         setLoading(false)
       }
     }
 
-    console.log('[useAuth] mount: loading session')
-    loadSession()
+    void loadAuthState()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[useAuth] onAuthStateChange:', event, {
-        hasSession: !!session,
-        expiresAt: session?.expires_at,
-      })
-      setSession(session ?? null)
-      setUser(session?.user ?? null)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null)
+      setUser(nextSession?.user ?? null)
       setLoading(false)
     })
 
     return () => {
-      mounted = false
+      active = false
       subscription.unsubscribe()
     }
   }, [supabase])
-
-  useEffect(() => {
-    console.log('[useAuth] state:', { loading, hasSession: !!session })
-  }, [loading, session])
 
   return { session, user, loading }
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAuthContext } from '@/hooks/auth-context'
 import { useSupabase } from '@/hooks/useSupabase'
 import { useAuth } from '@/hooks/useAuth'
 import { userService, UserProfile } from '@/services/userService'
@@ -13,8 +12,7 @@ export default function UserSearch() {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const { user } = useAuthContext()
-  const { loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const supabase = useSupabase()
   const searchRef = useRef<HTMLDivElement>(null)
   const latestRequestIdRef = useRef(0)

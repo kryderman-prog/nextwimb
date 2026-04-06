@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { logout } from '@/services/authService'
+import { useRouter } from 'next/navigation'
 
 export default function LogoutButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const onLogout = async () => {
     if (isLoggingOut) return
@@ -13,7 +14,7 @@ export default function LogoutButton() {
     setError(null)
 
     try {
-      await logout()
+      router.push('/logout')
     } catch (err) {
       console.error('Logout error:', err)
       setError('Failed to log out. Please try again.')
@@ -35,4 +36,3 @@ export default function LogoutButton() {
     </div>
   )
 }
-
