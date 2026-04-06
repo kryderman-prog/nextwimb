@@ -186,6 +186,23 @@ export default function UserSearch() {
 
       if (insertError) {
         const code = (insertError as unknown as { code?: string }).code
+        if (code === '23503') {
+          const message = (insertError as unknown as { message?: string }).message?.toLowerCase?.() ?? ''
+          if (message.includes('fk_invited_user') || message.includes('invited_user_id')) {
+            setInviteErrors((prev) => ({
+              ...prev,
+              [invitedUserId]: 'This user is not available to invite yet (profile not found).',
+            }))
+            return
+          }
+          if (message.includes('fk_circle') || message.includes('circle_id')) {
+            setInviteErrors((prev) => ({
+              ...prev,
+              [invitedUserId]: 'Unable to send invite (circle not found).',
+            }))
+            return
+          }
+        }
         if (code === '23505') {
           console.log('[UserSearch] invite already exists (unique constraint)')
           markUserAsInvited(invitedUserId)
