@@ -72,60 +72,96 @@ export default function UserSearch() {
     })
   }
 
+  type UserLike = {
+    id?: string | null
+    email?: string | null
+    name?: string | null
+    google_id?: string | null
+    username?: string | null
+    firstname?: string | null
+    user_metadata?: Record<string, unknown> | null
+  }
+
   const ensureUserExists = useCallback(
-    async (authUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } | null) => {
-      if (!authUser?.id) return
+    async (userLike: UserLike | null) => {
+      if (!userLike?.id) return
 
       const { data, error } = await supabase
         .from('users')
         .select('id')
-        .eq('id', authUser.id)
-        .single()
+        .eq('id', userLike.id)
+        .maybeSingle()
 
-      // If user already exists → do nothing
+      // already exists
       if (data) return
 
-      // If not found → insert
-      if (error && (error as { code?: string }).code === 'PGRST116') {
-        const metadata = authUser.user_metadata ?? {}
-        const googleId =
-          (metadata.provider_id as string | undefined) ||
-          authUser.id
+      if (error) throw error
 
-        const fullName =
-          (metadata.full_name as string | undefined) ||
-          (metadata.name as string | undefined) ||
-          null
+      // insert minimal record (schema may vary; try minimal first, then fallback)
+      const metadata = (userLike.user_metadata ?? {}) as Record<string, unknown>
+      const fullNameFromMetadata = (metadata.full_name as string | undefined) || null
 
-        const username = fullName || authUser.email?.split('@')[0] || 'user'
-        const firstname = fullName?.split(' ')[0] || 'User'
-
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: authUser.id,
-            google_id: googleId,
-            username,
-            firstname,
-          })
-
-        if (insertError) {
-          const code = (insertError as { code?: string }).code
-          // Idempotent: if another request created it first, continue.
-          if (code === '23505') return
-          console.error('USER_CREATE_FAILED', insertError)
-          throw insertError
-        }
-
-        return
+      const minimalInsert = {
+        id: userLike.id,
+        email: userLike.email || null,
+        name: fullNameFromMetadata,
       }
 
-      if (error) throw error
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert(minimalInsert)
+
+      if (!insertError) return
+
+      const insertCode = (insertError as { code?: string }).code
+      // Idempotent: if another request created it first, continue.
+      if (insertCode === '23505') return
+      const googleId =
+        (metadata.provider_id as string | undefined) ||
+        (userLike.google_id as string | undefined) ||
+        userLike.id
+
+      const fullName =
+        (metadata.full_name as string | undefined) ||
+        (metadata.name as string | undefined) ||
+        (userLike.name as string | undefined) ||
+        null
+
+      const username =
+        (userLike.username as string | undefined) ||
+        fullName ||
+        userLike.email?.split('@')[0] ||
+        `user-${String(userLike.id).slice(0, 8)}`
+
+      const firstname =
+        (userLike.firstname as string | undefined) ||
+        fullName?.split(' ')[0] ||
+        'User'
+
+      const { error: fallbackInsertError } = await supabase
+        .from('users')
+        .insert({
+          id: userLike.id,
+          google_id: googleId,
+          username,
+          firstname,
+        })
+
+      if (!fallbackInsertError) return
+
+      const fallbackCode = (fallbackInsertError as { code?: string }).code
+      if (fallbackCode === '23505') return
+
+      console.error('USER_CREATE_FAILED', fallbackInsertError)
+      throw fallbackInsertError
     },
     [supabase]
   )
 
-  const handleSendInvite = async (invitedUserId: string, invitedUsername: string) => {
+  const handleSendInvite = async (targetUser: UserProfile) => {
+    const invitedUserId = targetUser.id
+    const invitedUsername = targetUser.username
+
     if (loadingUser) return
     if (invitedUsers.has(invitedUserId)) return
     if (authLoading) {
@@ -153,8 +189,15 @@ export default function UserSearch() {
         return
       }
 
-      // Ensure sender exists in public.users (prevents FK violations in RPC inserts)
+      // Ensure BOTH sender + invited user exist in public.users (prevents FK violations)
       await ensureUserExists(authedUser)
+      await ensureUserExists({
+        id: targetUser.id,
+        email: null,
+        user_metadata: { full_name: targetUser.firstname ?? targetUser.username ?? null },
+        username: targetUser.username,
+        firstname: targetUser.firstname,
+      })
 
       const { data, error } = await supabase.rpc('send_circle_invite', {
         p_circle_name: `circle of ${invitedUsername}`,
@@ -251,7 +294,7 @@ export default function UserSearch() {
 
                     <button
                       type="button"
-                      onClick={() => void handleSendInvite(resultUser.id, resultUser.username)}
+                      onClick={() => void handleSendInvite(resultUser)}
                       disabled={isSending || isInvited}
                       className="shrink-0 text-xs px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-smooth"
                     >
